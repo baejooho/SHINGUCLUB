@@ -13,7 +13,7 @@ export default function SignupModal({ open, onClose, onSuccess, openLogin }) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [nickname, setNickname] = useState("");
+  const [name, setname] = useState("");
   const [phone, setPhone] = useState("");
 
   const handleSignup = async (e) => {
@@ -32,7 +32,7 @@ export default function SignupModal({ open, onClose, onSuccess, openLogin }) {
       // Firestore에 사용자 정보 저장
       await setDoc(doc(db, "users", result.user.uid), {
         email,
-        nickname,
+        name,
         phone,
         role: "user",
         createdAt: new Date(),
@@ -92,13 +92,13 @@ export default function SignupModal({ open, onClose, onSuccess, openLogin }) {
                 required
               />
 
-              {/* 닉네임 */}
+              {/* 이름 */}
               <input
                 type="text"
-                placeholder="닉네임"
+                placeholder="이름"
                 className="border w-full p-2 rounded"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
+                value={name}
+                onChange={(e) => setname(e.target.value)}
                 required
               />
 
