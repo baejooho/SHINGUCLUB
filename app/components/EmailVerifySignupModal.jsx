@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import emailjs from "@emailjs/browser";
 
 export default function EmailVerifySignupModal({ open, onClose, onSuccess }) {
-  if (!open) return null;
+
 
   const router = useRouter();
 
@@ -26,9 +26,23 @@ export default function EmailVerifySignupModal({ open, onClose, onSuccess }) {
     return () => clearTimeout(countdown);
   }, [timer]);
 
+  if (!open) return null;
+
   const generateCode = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
   };
+
+
+  const handleClose = () => {
+    setEmail("");
+    setCodeSent(false);
+    setInputCode("");
+    setToast("");
+    setTimer(0);
+    setShake(false);
+    onClose(); // 🔥 부모(Header)에서 verifyOpen false
+  };
+
 
   // 인증코드 발송 함수
   const sendVerifyCode = async () => {
@@ -93,11 +107,11 @@ export default function EmailVerifySignupModal({ open, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div
-        className={`bg-white p-6 rounded-xl w-80 transition-all ${
-          shake ? "animate-shake" : ""
-        }`}
+        className={`bg-white p-6 rounded-xl w-80 transition-all ${shake ? "animate-shake" : ""
+          }`}
       >
-        <button className="float-right" onClick={onClose}>✕</button>
+        <button className="float-right" onClick={handleClose}>✕</button>
+
 
         <h2 className="text-xl font-bold mb-4">학생 이메일 인증</h2>
 
@@ -139,15 +153,16 @@ export default function EmailVerifySignupModal({ open, onClose, onSuccess }) {
               인증 완료
             </button>
 
+            
+
             {/* 재전송 타이머 UI */}
             <button
               disabled={timer > 0}
               onClick={sendVerifyCode}
-              className={`w-full py-2 rounded border ${
-                timer > 0
+              className={`w-full py-2 rounded border ${timer > 0
                   ? "text-gray-400 border-gray-300"
                   : "text-blue-600 border-blue-400 hover:bg-blue-50"
-              }`}
+                }`}
             >
               {timer > 0
                 ? `재전송 (${timer}s)`
@@ -155,26 +170,14 @@ export default function EmailVerifySignupModal({ open, onClose, onSuccess }) {
             </button>
           </>
         )}
+        
 
         {toast && (
           <p className="mt-3 text-center text-blue-600">{toast}</p>
         )}
       </div>
 
-      {/* 🔥 흔들림 애니메이션 Tailwind custom keyframes */}
-      <style jsx global>{`
-        @keyframes shake {
-          0% { transform: translateX(0); }
-          20% { transform: translateX(-6px); }
-          40% { transform: translateX(6px); }
-          60% { transform: translateX(-6px); }
-          80% { transform: translateX(6px); }
-          100% { transform: translateX(0); }
-        }
-        .animate-shake {
-          animation: shake 0.4s ease;
-        }
-      `}</style>
+
     </div>
   );
 }

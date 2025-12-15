@@ -3,10 +3,15 @@
 import { useState, useEffect, useRef } from "react";
 import { auth, db } from "../../firebase/config";
 import { signOut } from "firebase/auth";
-import { collection, getDocs } from "firebase/firestore";
-import { useRouter } from "next/navigation";
+import {
+  collection,
+  getDocs,
+  getDoc,   // ✅ 추가
+  doc       // ✅ 추가
+} from "firebase/firestore";
+
+import { useRouter, usePathname } from "next/navigation";
 import { useSearch } from "../context/SearchContext";
-import { usePathname } from "next/navigation";
 import LoginModal from "./LoginModal";
 import EmailVerifySignupModal from "./EmailVerifySignupModal";
 
@@ -15,20 +20,52 @@ export default function Header() {
   const [user, setUser] = useState(null);
 
   const [loginOpen, setLoginOpen] = useState(false);
-  const [verifyOpen, setVerifyOpen] = useState(false); // 🔥 SignupModal 대신
+  const [verifyOpen, setVerifyOpen] = useState(false);
 
   const { search, setSearch } = useSearch();
 
   const [clubs, setClubs] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
   const router = useRouter();
+  const pathname = usePathname();
   const inputRef = useRef(null);
 
-  // 🔥 동아리 목록 가져오기
+  const [myClubStatus, setMyClubStatus] = useState(null);
+const [presidentClubId, setPresidentClubId] = useState(null);
+
+
+
+// 🔥 회장 관련 상태
+  const [isPresident, setIsPresident] = useState(false);
+  const [myClubId, setMyClubId] = useState(null);
+
+useEffect(() => {
+  if (!user) return;
+
+  getDoc(doc(db, "users", user.uid)).then((snap) => {
+    if (!snap.exists()) return;
+
+    const data = snap.data();
+
+    // 회장 여부
+    if (data.presidentOf) {
+      setIsPresident(true);
+      setPresidentClubId(data.presidentOf);
+    } else {
+      setIsPresident(false);
+    }
+
+    // 일반 회원용 (이미 만들어둔 거)
+    setMyClubStatus(data.myClubStatus || "none");
+    setMyClubId(data.myClubId || null);
+  });
+}, [user]);
+
+
+  // 🔹 동아리 목록 불러오기
   useEffect(() => {
     const fetchClubs = async () => {
       const snapshot = await getDocs(collection(db, "clubs"));
@@ -38,20 +75,39 @@ export default function Header() {
       }));
       setClubs(list);
     };
-
     fetchClubs();
   }, []);
 
-  // 🔥 로그인 상태 감지
+  // 🔹 로그인 상태 감지
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged((currentUser) => {
+    const unsub = auth.onAuthStateChanged(async (currentUser) => {
       setUser(currentUser);
+
+      if (!currentUser) {
+        setIsPresident(false);
+        setMyClubId(null);
+        return;
+      }
+
+      // 🔥 users 문서에서 회장 여부 확인
+      const userSnap = await getDoc(
+        doc(db, "users", currentUser.uid)
+      );
+
+      if (userSnap.exists() && userSnap.data().presidentOf) {
+        setIsPresident(true);
+        setMyClubId(userSnap.data().presidentOf);
+      } else {
+        setIsPresident(false);
+        setMyClubId(null);
+      }
     });
+
     return () => unsub();
   }, []);
 
-  // 🔥 페이지 이동 시 햄버거 메뉴 닫기
-  const pathname = usePathname();
+
+  // 🔹 페이지 이동 시 메뉴 닫기
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
@@ -59,6 +115,7 @@ export default function Header() {
   const handleLogout = async () => {
     await signOut(auth);
     setMenuOpen(false);
+    router.replace("/");
   };
 
   const movePage = (path) => {
@@ -66,19 +123,20 @@ export default function Header() {
     router.push(path);
   };
 
-  // 🔥 검색 자동완성
+  // 🔹 검색 자동완성
   useEffect(() => {
-    if (search.trim() === "") {
+    if (!search.trim()) {
       setSuggestions([]);
       return;
     }
+
     const filtered = clubs.filter((club) =>
       club.name.toLowerCase().includes(search.toLowerCase())
     );
     setSuggestions(filtered);
   }, [search, clubs]);
 
-  // 🔥 자동완성 키보드 이동
+  // 🔹 자동완성 키보드 이동
   const handleKeyDown = (e) => {
     if (suggestions.length === 0) return;
 
@@ -98,16 +156,14 @@ export default function Header() {
 
     if (e.key === "Enter") {
       e.preventDefault();
-
       if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-        const club = suggestions[selectedIndex];
-        router.push(`/clubs/${club.id}`);
+        router.push(`/clubs/${suggestions[selectedIndex].id}`);
         setShowSuggestions(false);
       }
     }
   };
 
-  // 🔥 자동완성 외부 클릭 → 닫기
+  // 🔹 자동완성 외부 클릭 닫기
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (inputRef.current && !inputRef.current.contains(e.target)) {
@@ -115,7 +171,8 @@ export default function Header() {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
@@ -150,12 +207,12 @@ export default function Header() {
                 {suggestions.map((club, idx) => (
                   <li
                     key={club.id}
-                    className={`px-4 py-2 cursor-pointer 
-                      ${selectedIndex === idx ? "bg-blue-100" : "hover:bg-gray-100"}
-                    `}
+                    className={`px-4 py-2 cursor-pointer ${selectedIndex === idx
+                      ? "bg-blue-100"
+                      : "hover:bg-gray-100"
+                      }`}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     onClick={() => {
-                      setSearch(club.name);
                       router.push(`/clubs/${club.id}`);
                       setShowSuggestions(false);
                     }}
@@ -167,20 +224,19 @@ export default function Header() {
             )}
           </div>
 
-          {/* 오른쪽 버튼들 */}
+          {/* 오른쪽 버튼 */}
           <div className="flex items-center gap-4">
             {!user && (
               <>
                 <button
-                  className="px-3 py-1 border rounded-lg hover:bg-gray-100"
+                  className="px-3 py-1 border rounded-lg"
                   onClick={() => setLoginOpen(true)}
                 >
                   로그인
                 </button>
-
                 <button
-                  className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                  onClick={() => setVerifyOpen(true)} // 🔥 변경됨
+                  className="px-3 py-1 bg-blue-500 text-white rounded-lg"
+                  onClick={() => setVerifyOpen(true)}
                 >
                   회원가입
                 </button>
@@ -195,13 +251,15 @@ export default function Header() {
             </button>
 
             {menuOpen && (
-              <div className="absolute right-6 top-16 w-52 bg-white border rounded-lg shadow-lg py-2 animate-fadeIn">
+              <div className="absolute right-6 top-16 w-56 bg-white border rounded-lg shadow-lg py-2">
+
                 {!user ? (
                   <p className="text-center py-3 text-gray-500">
                     로그인이 되어있지 않습니다
                   </p>
                 ) : (
                   <>
+                    {/* 기본 메뉴 */}
                     <button
                       className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                       onClick={() => movePage("/profile")}
@@ -216,7 +274,72 @@ export default function Header() {
                       정보 수정
                     </button>
 
-                    <hr />
+                    {/* 내 가입 동아리 */}
+{!isPresident && (
+  <div className="border-t mt-2 pt-2">
+    <p className="px-4 py-1 text-sm font-semibold text-gray-700">
+      내 가입 동아리
+    </p>
+
+    {myClubStatus === "approved" && (
+      <button
+        className="block w-full text-left px-4 py-2 text-blue-600 hover:bg-gray-100"
+        onClick={() => movePage(`/clubs/${myClubId}`)}
+      >
+        👉 내 동아리 바로가기
+      </button>
+    )}
+
+    {myClubStatus === "pending" && (
+      <p className="px-4 py-2 text-yellow-600 text-sm">
+        ⏳ 승인 대기중
+      </p>
+    )}
+
+    {myClubStatus === "none" && (
+      <p className="px-4 py-2 text-gray-500 text-sm">
+        아직 가입한 동아리가 없습니다
+      </p>
+    )}
+  </div>
+)}
+{isPresident && (
+  <div className="border-t mt-2 pt-2">
+    <p className="px-4 py-1 text-sm font-semibold text-gray-700">
+      내 동아리 관리
+    </p>
+
+    {/* ✅ 이거 추가 */}
+    <button
+      className="block w-full text-left px-4 py-2 text-blue-600 hover:bg-gray-100"
+      onClick={() => movePage(`/clubs/${presidentClubId}`)}
+    >
+      🏠 내 동아리 홈
+    </button>
+
+    <button
+      className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+      onClick={() => movePage(`/clubs/${presidentClubId}/admin`)}
+    >
+      📋 동아리 가입 승인
+    </button>
+
+    <button
+      className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+      onClick={() => movePage(`/clubs/${presidentClubId}/members`)}
+    >
+      👥 동아리 인원 관리
+    </button>
+
+  </div>
+)}
+
+
+
+
+                
+
+                    <hr className="my-2" />
 
                     <button
                       className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500"
@@ -228,6 +351,7 @@ export default function Header() {
                 )}
               </div>
             )}
+
           </div>
         </div>
       </header>
@@ -236,14 +360,12 @@ export default function Header() {
       <LoginModal
         open={loginOpen}
         onClose={() => setLoginOpen(false)}
-        onSuccess={() => console.log("로그인 성공")}
       />
 
-      {/* 🔥 이메일 인증 방식 회원가입 모달 */}
+      {/* 회원가입 모달 */}
       <EmailVerifySignupModal
         open={verifyOpen}
         onClose={() => setVerifyOpen(false)}
-        onSuccess={() => console.log("인증메일 발송")}
       />
     </>
   );

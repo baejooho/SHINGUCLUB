@@ -20,7 +20,6 @@ export default function LoginModal({ open, onClose, onSuccess }) {
       setToast("로그인 성공!");
 
       setTimeout(() => {
-        onSuccess();
         onClose();
       }, 1000);
     } catch {

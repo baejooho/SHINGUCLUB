@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { auth, db } from "../../../firebase/config";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, deleteDoc, setDoc } from "firebase/firestore";
 import {
   deleteUser,
   updatePassword,
@@ -10,6 +10,8 @@ import {
   EmailAuthProvider,
 } from "firebase/auth";
 import { useRouter } from "next/navigation";
+
+
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -70,11 +72,14 @@ export default function EditProfilePage() {
     "자율전공학과": ["자율전공학과"],
   };
 
+  
+
   const [userData, setUserData] = useState({
     name: "",
     phone: "",
     major: "",
     department: "",
+    studentId: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -130,17 +135,46 @@ export default function EditProfilePage() {
 
   // 정보 저장
   const handleSave = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+  const user = auth.currentUser;
+  if (!user) return;
 
-    try {
-      await updateDoc(doc(db, "users", user.uid), userData);
-      alert("정보가 수정되었습니다!");
-      router.push("/profile");
-    } catch {
-      alert("수정 실패");
+  try {
+    // 1️⃣ users 컬렉션 업데이트
+    await updateDoc(doc(db, "users", user.uid), userData);
+
+    // 2️⃣ 다시 users 문서 읽기 (myClubId 얻기)
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    if (!userSnap.exists()) {
+      alert("유저 정보가 없습니다.");
+      return;
     }
-  };
+
+    const myClubId = userSnap.data().myClubId;
+
+    // 3️⃣ 🔥 동아리에 가입되어 있으면 members도 같이 업데이트
+    if (myClubId) {
+      const memberRef = doc(db, "clubs", myClubId, "members", user.uid);
+
+      await setDoc(
+        memberRef,
+        {
+          name: userData.name,
+          phone: userData.phone,
+          department: userData.department,
+          studentId: userData.studentId,
+        },
+        { merge: true } // ⭐ role 같은 기존 필드 유지
+      );
+    }
+
+    alert("정보가 수정되었습니다!");
+    router.push("/profile");
+  } catch (error) {
+    console.error("handleSave 오류:", error);
+    alert("수정 실패");
+  }
+};
+
 
   // 🔥 비밀번호 변경
   const handleChangePassword = async () => {
@@ -237,6 +271,19 @@ export default function EditProfilePage() {
           placeholder="숫자만 입력"
           className="w-full border px-3 py-2 rounded mt-1"
         />
+      </div>
+
+      {/* 학번 */}
+      <div className="mb-4">
+        <label className="font-semibold">학번</label>
+        <input
+          name="studentId"
+          value={userData.studentId || ""}   // 🔥 핵심
+          onChange={handleChange}
+          placeholder="예: 2022136038"
+          className="w-full border px-3 py-2 rounded mt-1"
+        />
+
       </div>
 
       {/* 학부 */}

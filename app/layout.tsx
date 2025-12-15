@@ -1,7 +1,8 @@
-import React from "react";
 import "./globals.css";
-import HeaderWrapper from "./components/HeaderWrapper";
-import { SearchProvider } from "./context/SearchContext"; // 🔥 추가
+import type { ReactNode } from "react";
+
+import { SearchProvider } from "./context/SearchContext";
+import Header from "./components/Header";
 
 export const metadata = {
   title: "Shingu Club",
@@ -11,15 +12,17 @@ export const metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <html lang="ko">
       <body className="min-h-screen bg-gray-50">
-        {/* 🔥 전역 검색 상태 Provider로 전체 감싸기 */}
+        {/* 🔥 전역 상태 Provider */}
         <SearchProvider>
-          <HeaderWrapper />
-          <main className="pt-20 px-4">{children}</main>
+          <Header />
+          <main className="pt-20 px-4">
+            {children}
+          </main>
         </SearchProvider>
       </body>
     </html>
