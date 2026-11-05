@@ -51,6 +51,16 @@ export default function EmailVerifySignupModal({ open, onClose, onSuccess }) {
       return;
     }
 
+    const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
+    const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
+    const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
+
+    if (!serviceId || !templateId || !publicKey) {
+      console.error("EmailJS 환경변수가 없습니다. .env.local을 확인하세요.");
+      setToast("이메일 발송 설정이 없습니다.");
+      return;
+    }
+
     try {
       const code = generateCode();
 
@@ -60,15 +70,14 @@ export default function EmailVerifySignupModal({ open, onClose, onSuccess }) {
         createdAt: new Date(),
       });
 
-      // EmailJS로 발송
       await emailjs.send(
-        "service_ex63x8g",
-        "template_px72gnf",
+        serviceId,
+        templateId,
         {
           user_email: email,
           verify_code: code,
         },
-        "gH5UXA6t6wBqrBAGB"
+        publicKey
       );
 
       setCodeSent(true);

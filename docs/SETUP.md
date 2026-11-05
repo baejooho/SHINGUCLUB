@@ -32,13 +32,18 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage 버킷 |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | 메시징 센더 ID |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | 앱 ID |
+| `NEXT_PUBLIC_EMAILJS_SERVICE_ID` | EmailJS 서비스 ID |
+| `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID` | EmailJS 템플릿 ID |
+| `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY` | EmailJS 공개 키 |
 
 `.env.local`은 Git에 올라가지 않는다. (`.gitignore`에 `.env*` 포함, `.env.example`만 커밋)
+
+EmailJS 서비스 ID, 템플릿 ID, 공개 키도 소스에 넣지 않는다. 회원가입 인증 메일 발송에 쓰며, 값이 없으면 발송 버튼이 안내 문구만 보여 준다.
 
 Firebase Console에서 확인할 항목:
 - Authentication: Email/Password 활성화
 - Firestore: `clubs`, `clubApplications` 등 컬렉션
-- (선택) Storage, EmailJS 키
+- (선택) Storage
 
 ## 3-1. 초기 동아리 데이터 (선택)
 
@@ -67,7 +72,7 @@ npm start
 
 1. GitHub 저장소 연결
 2. Framework Preset: Next.js
-3. 환경변수에 Firebase 공개 설정 등록
+3. 환경변수에 Firebase와 EmailJS 설정 등록
 4. Deploy
 
 ## 7. 주의사항

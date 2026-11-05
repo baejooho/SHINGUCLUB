@@ -37,7 +37,7 @@ git clone https://github.com/baejooho/SHINGUCLUB.git
 cd SHINGUCLUB
 npm install
 cp .env.example .env.local
-# .env.local에 Firebase 설정값 입력
+# .env.local에 Firebase, EmailJS 설정값 입력
 npm run dev
 ```
 
