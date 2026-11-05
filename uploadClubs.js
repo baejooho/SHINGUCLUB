@@ -1,17 +1,30 @@
 // uploadClubs.js
-
+import dotenv from "dotenv";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
 
-// 🔥 여기 firebaseConfig는 너의 firebase/config.js 에 있는 값으로 바꿔야 함!
+dotenv.config({ path: ".env" });
+dotenv.config({ path: ".env.local", override: true });
+
 const firebaseConfig = {
-  apiKey: "AIzaSyD9Xryev37hu-jazCTFHkEpDRDgrwC4jRk",
-  authDomain: "club-site-f783b.firebaseapp.com",
-  projectId: "club-site-f783b",
-  storageBucket: "club-site-f783b.firebasestorage.app",
-  messagingSenderId: "802499909390",
-  appId: "1:802499909390:web:3ccbc9a90dff28acf4295f"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
+
+const missing = Object.entries(firebaseConfig)
+  .filter(([, value]) => !value)
+  .map(([key]) => key);
+
+if (missing.length > 0) {
+  console.error(
+    "Firebase 환경변수가 없습니다. .env.example을 .env.local로 복사한 뒤 값을 입력하세요."
+  );
+  process.exit(1);
+}
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -39,7 +52,8 @@ const clubs = [
   console.log("동아리 업로드 시작...");
   for (let club of clubs) {
     await addDoc(collection(db, "clubs"), club);
-    console.log(`✔ ${club.name} 추가됨`);
+    console.log("업로드:", club.name);
   }
-  console.log("🔥 모든 동아리 업로드 완료!");
+  console.log("완료!");
+  process.exit(0);
 })();
